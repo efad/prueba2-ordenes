@@ -1,6 +1,6 @@
-# API de Ordenes - Prueba Tecnica 2
+# API de Órdenes - Prueba Técnica 2
 
-API GraphQL de gestion de ordenes de compra construida con Go, gqlgen, PostgreSQL y Clean Architecture.
+API GraphQL de gestión de órdenes de compra construida con Go, gqlgen, PostgreSQL y Clean Architecture.
 
 ## Requisitos
 
@@ -8,7 +8,7 @@ API GraphQL de gestion de ordenes de compra construida con Go, gqlgen, PostgreSQ
 - Docker y Docker Compose
 - Make (opcional)
 
-## Arranque rapido
+## Arranque rápido
 
 ```bash
 cp .env.example .env
@@ -17,7 +17,7 @@ docker compose up --build -d
 
 Servicios:
 
-| URL | Descripcion |
+| URL | Descripción |
 |-----|-------------|
 | `http://localhost:8080/health` | Health check |
 | `http://localhost:8080/` | GraphQL Playground |
@@ -42,15 +42,15 @@ networkingMode=mirrored
 
 Luego ejecutar `wsl --shutdown`.
 
-Al arrancar, la aplicacion ejecuta migraciones goose y carga productos de prueba si la tabla esta vacia.
+Al arrancar, la aplicación ejecuta migraciones goose y carga productos de prueba si la tabla está vacía.
 
 ## Variables de entorno
 
-| Variable | Obligatoria | Default | Descripcion |
+| Variable | Obligatoria | Default | Descripción |
 |----------|-------------|---------|-------------|
-| `DATABASE_URL` | Si | - | Conexion PostgreSQL |
-| `JWT_SECRET` | Si | - | Secreto para firmar JWT |
-| `JWT_EXPIRATION` | No | `24h` | Duracion del token |
+| `DATABASE_URL` | Sí | - | Conexión PostgreSQL |
+| `JWT_SECRET` | Sí | - | Secreto para firmar JWT |
+| `JWT_EXPIRATION` | No | `24h` | Duración del token |
 | `PORT` | No | `8080` | Puerto HTTP |
 | `POSTGRES_USER` | No | `orders` | Usuario Postgres (compose) |
 | `POSTGRES_PASSWORD` | No | `orders` | Password Postgres (compose) |
@@ -64,7 +64,7 @@ Ver [.env.example](.env.example).
 # Unit tests
 go test ./...
 
-# Integracion (requiere Postgres)
+# Integración (requiere Postgres)
 make postgres-up
 make migrate-up
 make test-integration
@@ -130,7 +130,7 @@ mutation {
 }
 ```
 
-### 5. Mis ordenes y cancelar
+### 5. Mis órdenes y cancelar
 
 ```graphql
 query {
