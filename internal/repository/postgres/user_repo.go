@@ -49,7 +49,7 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*domain
 	user, err := scanUser(row)
 	if err != nil {
 		if isNoRows(err) {
-			return nil, domain.ErrInvalidCredentials
+			return nil, nil
 		}
 		return nil, fmt.Errorf("find user by email: %w", err)
 	}
