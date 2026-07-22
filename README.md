@@ -158,3 +158,7 @@ mutation {
 - goose (migraciones)
 - DataLoader (N+1)
 - docker-compose
+
+## Decisión de diseño: transacciones
+
+Las operaciones que modifican stock y órdenes se ejecutan dentro de un `TransactionManager` definido en dominio, que abre una transacción PostgreSQL y la propaga por `context` a los repositorios. Así, `createOrder` valida stock, descuenta inventario y persiste la orden de forma atómica: ante cualquier fallo se hace rollback completo. El descuento de stock usa `UPDATE ... WHERE stock >= cantidad` para evitar sobreventa en concurrencia. La cancelación bloquea la orden con `SELECT ... FOR UPDATE`, restaura el stock de cada ítem y marca la orden como cancelada (soft delete).
