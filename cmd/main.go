@@ -59,13 +59,18 @@ func main() {
 	defer db.Close()
 
 	userRepo := postgres.NewUserRepository(db)
+	productRepo := postgres.NewProductRepository(db)
 	tokenService, err := jwtservice.NewService(jwtSecret, jwtExpiration)
 	if err != nil {
 		log.Fatalf("error inicializando jwt: %v", err)
 	}
 
 	authUC := usecase.NewAuthUseCase(userRepo, tokenService)
-	resolver := &graphql.Resolver{AuthUC: authUC}
+	productUC := usecase.NewProductUseCase(productRepo)
+	resolver := &graphql.Resolver{
+		AuthUC:    authUC,
+		ProductUC: productUC,
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthHandler)

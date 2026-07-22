@@ -43,12 +43,32 @@ func (r *mutationResolver) CancelOrder(ctx context.Context, id string) (*model.O
 
 // Products is the resolver for the products field.
 func (r *queryResolver) Products(ctx context.Context, filter *model.ProductFilter, page *int32, pageSize *int32) (*model.ProductConnection, error) {
-	return nil, fmt.Errorf("products: pendiente de implementacion")
+	result, err := r.ProductUC.List(
+		ctx,
+		toDomainProductFilter(filter),
+		int32Value(page, 1),
+		int32Value(pageSize, 10),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.ProductConnection{
+		Items:      toGraphQLProducts(result.Items),
+		TotalCount: int32(result.TotalCount),
+		Page:       int32(result.Page),
+		PageSize:   int32(result.PageSize),
+	}, nil
 }
 
 // Product is the resolver for the product field.
 func (r *queryResolver) Product(ctx context.Context, id string) (*model.Product, error) {
-	return nil, fmt.Errorf("product: pendiente de implementacion")
+	product, err := r.ProductUC.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return toGraphQLProduct(*product), nil
 }
 
 // MyOrders is the resolver for the myOrders field.
