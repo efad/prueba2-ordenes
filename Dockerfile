@@ -18,6 +18,7 @@ RUN apk add --no-cache ca-certificates curl
 WORKDIR /app
 
 COPY --from=builder /server /app/server
+COPY --from=builder /app/migrations /app/migrations
 
 EXPOSE 8080
 
