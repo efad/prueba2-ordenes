@@ -1,4 +1,4 @@
-.PHONY: migrate-up migrate-down migrate-status postgres-up postgres-down test-integration
+.PHONY: migrate-up migrate-down migrate-status postgres-up postgres-down test test-integration lint docker-up docker-down
 
 DATABASE_URL ?= postgres://orders:orders@localhost:5432/orders?sslmode=disable
 
@@ -17,5 +17,17 @@ postgres-up:
 postgres-down:
 	docker compose down
 
+docker-up:
+	docker compose up --build -d
+
+docker-down:
+	docker compose down
+
+test:
+	go test ./...
+
 test-integration:
 	go test -tags=integration ./internal/repository/postgres/... -v
+
+lint:
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8 run ./...

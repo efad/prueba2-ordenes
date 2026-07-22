@@ -17,6 +17,7 @@ import (
 	"github.com/efad/prueba2-ordenes/internal/delivery/graphql/middleware"
 	"github.com/efad/prueba2-ordenes/internal/domain"
 	"github.com/efad/prueba2-ordenes/internal/repository/postgres"
+	"github.com/efad/prueba2-ordenes/internal/seed"
 	jwtservice "github.com/efad/prueba2-ordenes/internal/service/jwt"
 	"github.com/efad/prueba2-ordenes/internal/usecase"
 	"github.com/vektah/gqlparser/v2/ast"
@@ -52,11 +53,19 @@ func main() {
 		jwtExpiration = parsed
 	}
 
+	if err := postgres.RunMigrations(databaseURL); err != nil {
+		log.Fatalf("error ejecutando migraciones: %v", err)
+	}
+
 	db, err := postgres.NewDB(ctx, databaseURL)
 	if err != nil {
 		log.Fatalf("error conectando postgres: %v", err)
 	}
 	defer db.Close()
+
+	if err := seed.Products(ctx, db); err != nil {
+		log.Fatalf("error ejecutando seed: %v", err)
+	}
 
 	userRepo := postgres.NewUserRepository(db)
 	productRepo := postgres.NewProductRepository(db)

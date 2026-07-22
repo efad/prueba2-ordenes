@@ -124,3 +124,26 @@ func TestOrderUseCaseGetOrderNotOwned(t *testing.T) {
 		t.Fatalf("GetOrder() error = %v, want ErrOrderNotOwned", err)
 	}
 }
+
+func TestOrderUseCaseCancelOrderSuccess(t *testing.T) {
+	t.Parallel()
+
+	orders := &mockOrderRepository{
+		orders: map[string]*domain.Order{
+			"order-1": {
+				ID:     "order-1",
+				UserID: "user-1",
+				Status: domain.OrderStatusPending,
+			},
+		},
+	}
+	orderUC := usecase.NewOrderUseCase(orders, &mockProductRepository{}, mockTxManager{})
+
+	order, err := orderUC.CancelOrder(context.Background(), "user-1", "order-1")
+	if err != nil {
+		t.Fatalf("CancelOrder() error = %v", err)
+	}
+	if order.Status != domain.OrderStatusCancelled {
+		t.Fatalf("status = %s, want CANCELLED", order.Status)
+	}
+}
