@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
@@ -12,6 +14,11 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/efad/prueba2-ordenes/internal/delivery/graphql"
+	"github.com/efad/prueba2-ordenes/internal/delivery/graphql/middleware"
+	"github.com/efad/prueba2-ordenes/internal/domain"
+	"github.com/efad/prueba2-ordenes/internal/repository/postgres"
+	jwtservice "github.com/efad/prueba2-ordenes/internal/service/jwt"
+	"github.com/efad/prueba2-ordenes/internal/usecase"
 	"github.com/vektah/gqlparser/v2/ast"
 )
 
@@ -25,10 +32,45 @@ func main() {
 		port = "8080"
 	}
 
+	ctx := context.Background()
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		log.Fatal("DATABASE_URL es obligatorio")
+	}
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET es obligatorio")
+	}
+
+	jwtExpiration := 24 * time.Hour
+	if value := os.Getenv("JWT_EXPIRATION"); value != "" {
+		parsed, err := time.ParseDuration(value)
+		if err != nil {
+			log.Fatalf("JWT_EXPIRATION invalido: %v", err)
+		}
+		jwtExpiration = parsed
+	}
+
+	db, err := postgres.NewDB(ctx, databaseURL)
+	if err != nil {
+		log.Fatalf("error conectando postgres: %v", err)
+	}
+	defer db.Close()
+
+	userRepo := postgres.NewUserRepository(db)
+	tokenService, err := jwtservice.NewService(jwtSecret, jwtExpiration)
+	if err != nil {
+		log.Fatalf("error inicializando jwt: %v", err)
+	}
+
+	authUC := usecase.NewAuthUseCase(userRepo, tokenService)
+	resolver := &graphql.Resolver{AuthUC: authUC}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthHandler)
 	mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	mux.Handle("/query", newGraphQLHandler())
+	mux.Handle("/query", newGraphQLHandler(resolver, tokenService))
 
 	addr := ":" + port
 	log.Printf("servidor escuchando en http://localhost%s", addr)
@@ -51,9 +93,9 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(healthResponse{Status: "ok"})
 }
 
-func newGraphQLHandler() http.Handler {
+func newGraphQLHandler(resolver *graphql.Resolver, tokenService domain.TokenService) http.Handler {
 	srv := handler.New(graphql.NewExecutableSchema(graphql.Config{
-		Resolvers: &graphql.Resolver{},
+		Resolvers: resolver,
 	}))
 
 	srv.AddTransport(transport.Options{})
@@ -64,6 +106,8 @@ func newGraphQLHandler() http.Handler {
 	srv.Use(extension.AutomaticPersistedQuery{
 		Cache: lru.New[string](100),
 	})
+	srv.AroundOperations(middleware.Auth(tokenService))
+	srv.SetErrorPresenter(graphql.ErrorPresenter)
 
 	return srv
 }

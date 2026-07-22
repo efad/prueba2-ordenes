@@ -1,5 +1,7 @@
 package graphql
 
-// Resolver es la raiz de inyeccion de dependencias para los resolvers GraphQL.
-// Los use cases se agregaran en commits posteriores.
-type Resolver struct{}
+import "github.com/efad/prueba2-ordenes/internal/usecase"
+
+type Resolver struct {
+	AuthUC *usecase.AuthUseCase
+}

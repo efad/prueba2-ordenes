@@ -13,12 +13,22 @@ import (
 
 // Register is the resolver for the register field.
 func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthPayload, error) {
-	return nil, fmt.Errorf("register: pendiente de implementacion")
+	result, err := r.AuthUC.Register(ctx, input.Email, input.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.AuthPayload{Token: result.Token}, nil
 }
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthPayload, error) {
-	return nil, fmt.Errorf("login: pendiente de implementacion")
+	result, err := r.AuthUC.Login(ctx, input.Email, input.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.AuthPayload{Token: result.Token}, nil
 }
 
 // CreateOrder is the resolver for the createOrder field.
