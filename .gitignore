@@ -7,6 +7,12 @@
 *.so
 *.dylib
 
+# gqlgen (generado en internal/delivery/graphql)
+*.exe~
+*.dll
+*.so
+*.dylib
+
 # Test
 *.test
 *.out
