@@ -60,6 +60,8 @@ func main() {
 
 	userRepo := postgres.NewUserRepository(db)
 	productRepo := postgres.NewProductRepository(db)
+	orderRepo := postgres.NewOrderRepository(db)
+	txManager := postgres.NewTransactionManager(db)
 	tokenService, err := jwtservice.NewService(jwtSecret, jwtExpiration)
 	if err != nil {
 		log.Fatalf("error inicializando jwt: %v", err)
@@ -67,15 +69,17 @@ func main() {
 
 	authUC := usecase.NewAuthUseCase(userRepo, tokenService)
 	productUC := usecase.NewProductUseCase(productRepo)
+	orderUC := usecase.NewOrderUseCase(orderRepo, productRepo, txManager)
 	resolver := &graphql.Resolver{
 		AuthUC:    authUC,
 		ProductUC: productUC,
+		OrderUC:   orderUC,
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthHandler)
 	mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	mux.Handle("/query", newGraphQLHandler(resolver, tokenService))
+	mux.Handle("/query", newGraphQLHandler(resolver, tokenService, userRepo, productRepo))
 
 	addr := ":" + port
 	log.Printf("servidor escuchando en http://localhost%s", addr)
@@ -98,7 +102,12 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(healthResponse{Status: "ok"})
 }
 
-func newGraphQLHandler(resolver *graphql.Resolver, tokenService domain.TokenService) http.Handler {
+func newGraphQLHandler(
+	resolver *graphql.Resolver,
+	tokenService domain.TokenService,
+	userRepo domain.UserRepository,
+	productRepo domain.ProductRepository,
+) http.Handler {
 	srv := handler.New(graphql.NewExecutableSchema(graphql.Config{
 		Resolvers: resolver,
 	}))
@@ -112,6 +121,7 @@ func newGraphQLHandler(resolver *graphql.Resolver, tokenService domain.TokenServ
 		Cache: lru.New[string](100),
 	})
 	srv.AroundOperations(middleware.Auth(tokenService))
+	srv.AroundOperations(graphql.DataLoaderMiddleware(userRepo, productRepo))
 	srv.SetErrorPresenter(graphql.ErrorPresenter)
 
 	return srv

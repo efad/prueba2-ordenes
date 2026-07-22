@@ -6,9 +6,9 @@ package graphql
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/efad/prueba2-ordenes/internal/delivery/graphql/model"
+	"github.com/efad/prueba2-ordenes/internal/domain"
 )
 
 // Register is the resolver for the register field.
@@ -33,12 +33,70 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 
 // CreateOrder is the resolver for the createOrder field.
 func (r *mutationResolver) CreateOrder(ctx context.Context, input model.CreateOrderInput) (*model.Order, error) {
-	return nil, fmt.Errorf("createOrder: pendiente de implementacion")
+	userID, err := requireUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	order, err := r.OrderUC.CreateOrder(ctx, userID, toDomainCreateOrderItems(input.Items))
+	if err != nil {
+		return nil, err
+	}
+
+	return toGraphQLOrder(*order), nil
 }
 
 // CancelOrder is the resolver for the cancelOrder field.
 func (r *mutationResolver) CancelOrder(ctx context.Context, id string) (*model.Order, error) {
-	return nil, fmt.Errorf("cancelOrder: pendiente de implementacion")
+	userID, err := requireUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	order, err := r.OrderUC.CancelOrder(ctx, userID, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return toGraphQLOrder(*order), nil
+}
+
+// User is the resolver for the user field.
+func (r *orderResolver) User(ctx context.Context, obj *model.Order) (*model.User, error) {
+	if obj.User == nil || obj.User.ID == "" {
+		return nil, domain.ErrOrderNotFound
+	}
+
+	loaders := LoadersFromContext(ctx)
+	if loaders == nil {
+		return nil, domain.ErrUnauthorized
+	}
+
+	user, err := loaders.User.Load(ctx, obj.User.ID)()
+	if err != nil {
+		return nil, err
+	}
+
+	return toGraphQLUser(*user), nil
+}
+
+// Product is the resolver for the product field.
+func (r *orderItemResolver) Product(ctx context.Context, obj *model.OrderItem) (*model.Product, error) {
+	if obj.Product == nil || obj.Product.ID == "" {
+		return nil, domain.ErrProductNotFound
+	}
+
+	loaders := LoadersFromContext(ctx)
+	if loaders == nil {
+		return nil, domain.ErrUnauthorized
+	}
+
+	product, err := loaders.Product.Load(ctx, obj.Product.ID)()
+	if err != nil {
+		return nil, err
+	}
+
+	return toGraphQLProduct(*product), nil
 }
 
 // Products is the resolver for the products field.
@@ -73,19 +131,52 @@ func (r *queryResolver) Product(ctx context.Context, id string) (*model.Product,
 
 // MyOrders is the resolver for the myOrders field.
 func (r *queryResolver) MyOrders(ctx context.Context, page *int32, pageSize *int32) (*model.OrderConnection, error) {
-	return nil, fmt.Errorf("myOrders: pendiente de implementacion")
+	userID, err := requireUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := r.OrderUC.MyOrders(ctx, userID, int32Value(page, 1), int32Value(pageSize, 10))
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.OrderConnection{
+		Items:      toGraphQLOrders(result.Items),
+		TotalCount: int32(result.TotalCount),
+		Page:       int32(result.Page),
+		PageSize:   int32(result.PageSize),
+	}, nil
 }
 
 // Order is the resolver for the order field.
 func (r *queryResolver) Order(ctx context.Context, id string) (*model.Order, error) {
-	return nil, fmt.Errorf("order: pendiente de implementacion")
+	userID, err := requireUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	order, err := r.OrderUC.GetOrder(ctx, userID, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return toGraphQLOrder(*order), nil
 }
 
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
+// Order returns OrderResolver implementation.
+func (r *Resolver) Order() OrderResolver { return &orderResolver{r} }
+
+// OrderItem returns OrderItemResolver implementation.
+func (r *Resolver) OrderItem() OrderItemResolver { return &orderItemResolver{r} }
+
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
+type orderResolver struct{ *Resolver }
+type orderItemResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }

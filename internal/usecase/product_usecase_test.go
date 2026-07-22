@@ -57,8 +57,18 @@ func (m *mockProductRepository) FindByIDs(_ context.Context, ids []string) ([]do
 	return []domain.Product{}, nil
 }
 
-func (m *mockProductRepository) DecrementStock(_ context.Context, _ string, _ int) error {
-	return nil
+func (m *mockProductRepository) DecrementStock(_ context.Context, productID string, quantity int) error {
+	for i := range m.products {
+		if m.products[i].ID != productID {
+			continue
+		}
+		if m.products[i].Stock < quantity {
+			return domain.ErrInsufficientStock
+		}
+		m.products[i].Stock -= quantity
+		return nil
+	}
+	return domain.ErrProductNotFound
 }
 
 func (m *mockProductRepository) RestoreStock(_ context.Context, _ string, _ int) error {

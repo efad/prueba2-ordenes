@@ -28,3 +28,11 @@ models:
   UUID:
     model:
       - github.com/99designs/gqlgen/graphql.UUID
+  Order:
+    fields:
+      user:
+        resolver: true
+  OrderItem:
+    fields:
+      product:
+        resolver: true
