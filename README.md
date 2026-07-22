@@ -1,0 +1,160 @@
+# API de Ordenes - Prueba Tecnica 2
+
+API GraphQL de gestion de ordenes de compra construida con Go, gqlgen, PostgreSQL y Clean Architecture.
+
+## Requisitos
+
+- Go 1.25+
+- Docker y Docker Compose
+- Make (opcional)
+
+## Arranque rapido
+
+```bash
+cp .env.example .env
+docker compose up --build -d
+```
+
+Servicios:
+
+| URL | Descripcion |
+|-----|-------------|
+| `http://localhost:8080/health` | Health check |
+| `http://localhost:8080/` | GraphQL Playground |
+| `http://localhost:8080/query` | Endpoint GraphQL |
+
+### Nota para WSL (Windows)
+
+Si Docker Engine corre dentro de WSL y `localhost:8080` no responde desde el navegador de Windows, usar la IP de WSL:
+
+```bash
+wsl hostname -I
+# Abrir http://<primera-ip>:8080/
+```
+
+O habilitar en `%USERPROFILE%\.wslconfig`:
+
+```ini
+[wsl2]
+localhostForwarding=true
+networkingMode=mirrored
+```
+
+Luego ejecutar `wsl --shutdown`.
+
+Al arrancar, la aplicacion ejecuta migraciones goose y carga productos de prueba si la tabla esta vacia.
+
+## Variables de entorno
+
+| Variable | Obligatoria | Default | Descripcion |
+|----------|-------------|---------|-------------|
+| `DATABASE_URL` | Si | - | Conexion PostgreSQL |
+| `JWT_SECRET` | Si | - | Secreto para firmar JWT |
+| `JWT_EXPIRATION` | No | `24h` | Duracion del token |
+| `PORT` | No | `8080` | Puerto HTTP |
+| `POSTGRES_USER` | No | `orders` | Usuario Postgres (compose) |
+| `POSTGRES_PASSWORD` | No | `orders` | Password Postgres (compose) |
+| `POSTGRES_DB` | No | `orders` | Base de datos (compose) |
+
+Ver [.env.example](.env.example).
+
+## Tests
+
+```bash
+# Unit tests
+go test ./...
+
+# Integracion (requiere Postgres)
+make postgres-up
+make migrate-up
+make test-integration
+```
+
+## Lint
+
+```bash
+go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8 run ./...
+```
+
+## Ejemplos GraphQL
+
+### 1. Registro
+
+```graphql
+mutation {
+  register(input: { email: "user@example.com", password: "password1" }) {
+    token
+  }
+}
+```
+
+### 2. Login
+
+```graphql
+mutation {
+  login(input: { email: "user@example.com", password: "password1" }) {
+    token
+  }
+}
+```
+
+### 3. Productos (requiere token)
+
+En Playground, agregar HTTP HEADERS:
+
+```json
+{ "Authorization": "Bearer TU_TOKEN" }
+```
+
+```graphql
+query {
+  products(page: 1, pageSize: 10, filter: { name: "Teclado", minPrice: 10 }) {
+    totalCount
+    items { id name price stock }
+  }
+}
+```
+
+### 4. Crear orden
+
+```graphql
+mutation {
+  createOrder(input: {
+    items: [{ productId: "UUID_DEL_PRODUCTO", quantity: 1 }]
+  }) {
+    id
+    total
+    status
+    items { quantity unitPrice product { name } }
+  }
+}
+```
+
+### 5. Mis ordenes y cancelar
+
+```graphql
+query {
+  myOrders {
+    items { id total status items { product { name } } }
+  }
+}
+
+mutation {
+  cancelOrder(id: "UUID_ORDEN") {
+    id
+    status
+  }
+}
+```
+
+
+
+
+## Stack
+
+- Go + gqlgen
+- PostgreSQL (pgx)
+- JWT (HS256)
+- goose (migraciones)
+- DataLoader (N+1)
+- docker-compose
