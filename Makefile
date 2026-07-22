@@ -1,4 +1,4 @@
-.PHONY: migrate-up migrate-down migrate-status postgres-up postgres-down
+.PHONY: migrate-up migrate-down migrate-status postgres-up postgres-down test-integration
 
 DATABASE_URL ?= postgres://orders:orders@localhost:5432/orders?sslmode=disable
 
@@ -16,3 +16,6 @@ postgres-up:
 
 postgres-down:
 	docker compose down
+
+test-integration:
+	go test -tags=integration ./internal/repository/postgres/... -v
